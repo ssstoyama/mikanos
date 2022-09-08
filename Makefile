@@ -1,7 +1,11 @@
 SHELL=/bin/bash
 
-.PHONY:
-build:
+.PHONY: env
+env:
+	source ~/osbook/devenv/buildenv.sh
+
+.PHONY: build
+build: env
 	cd /workspaces/mikanos/kernel && make
 
 .PHONY: qemu
