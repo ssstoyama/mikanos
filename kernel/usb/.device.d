@@ -1,8 +1,6 @@
-pci.o: pci.cpp pci.hpp \
-  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
-  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/__config \
-  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
+usb/device.o: usb/device.cpp usb/device.hpp \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/array \
+  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/cstddef \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/version \
@@ -11,6 +9,8 @@ pci.o: pci.cpp pci.hpp \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/initializer_list \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
+  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
+  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/__debug \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/iterator \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/iosfwd \
@@ -32,4 +32,9 @@ pci.o: pci.cpp pci.hpp \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/functional \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/bit error.hpp \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
-  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h asmfunc.h
+  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
+  usb/setupdata.hpp usb/endpoint.hpp usb/arraymap.hpp \
+  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/optional \
+  usb/descriptor.hpp usb/classdriver/base.hpp \
+  usb/classdriver/keyboard.hpp usb/classdriver/hid.hpp \
+  usb/classdriver/mouse.hpp logger.hpp

@@ -1,4 +1,4 @@
-pci.o: pci.cpp pci.hpp \
+usb/xhci/trb.o: usb/xhci/trb.cpp usb/xhci/trb.hpp \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
@@ -30,6 +30,7 @@ pci.o: pci.cpp pci.hpp \
   /home/vscode/osbook/devenv/x86_64-elf/include/assert.h \
   /home/vscode/osbook/devenv/x86_64-elf/include/_ansi.h \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/functional \
-  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/bit error.hpp \
+  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/bit \
+  usb/xhci/context.hpp usb/endpoint.hpp error.hpp \
   /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
-  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h asmfunc.h
+  /home/vscode/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h
