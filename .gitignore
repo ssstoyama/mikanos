@@ -1,1 +1,13 @@
-**/Build
+/mnt
+/*.img
+/Build
+
+*.o
+*.elf
+*.bin
+
+/.vscode/**
+!/.vscode/launch.json
+!/.vscode/c_cpp_properties.json
+
+/edk2/**/.*

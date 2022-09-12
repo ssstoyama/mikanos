@@ -109,7 +109,7 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
   console = new(console_buf) Console{
     *pixel_writer, kDesktopFGColor, kDesktopBGColor
   };
-  printk("Welcome to MikanOS!\n");
+  printk("Welcome to ssstoyama!\n");
   SetLogLevel(kWarn);
 
   mouse_cursor = new(mouse_cursor_buf) MouseCursor{
