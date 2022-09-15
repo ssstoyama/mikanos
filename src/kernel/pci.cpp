@@ -285,7 +285,7 @@ namespace pci {
     uint8_t msi_cap_addr = 0;
     uint8_t msix_cap_addr = 0;
     while (cap_addr != 0) {
-      auto header = ReadCapabilityHeader(dev, 0x34u);
+      auto header = ReadCapabilityHeader(dev, cap_addr);
       if (header.bits.cap_id == kCapabilityMSI) {
         msi_cap_addr = cap_addr;
       } else if (header.bits.cap_id == kCapabilityMSIX) {
