@@ -13,6 +13,7 @@
 #include "interrupt.hpp"
 #include "asmfunc.h"
 #include "queue.hpp"
+#include "segment.hpp"
 
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -86,7 +87,16 @@ void IntHandlerXHCI(InterruptFrame* frame) {
   NotifyEndOfInterrupt();
 }
 
-extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config, const MemoryMap& memory_map) {
+alignas(16) uint8_t kernel_main_stack[1024*1024];
+
+extern "C"
+void KernelMainNewStack(
+  const FrameBufferConfig& frame_buffer_config_ref,
+  const MemoryMap& memory_map_ref
+) {
+  FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
+  MemoryMap memory_map{memory_map_ref};
+
   switch (frame_buffer_config.pixel_format) {
     case kPixelRGBResv8BitPerColor:
       pixel_writer = new(pixel_writer_buf)
@@ -143,6 +153,15 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config, const M
       }
     }
   }
+
+  SetupSegments();
+
+  const uint16_t kernel_cs = 1 << 3;
+  const uint16_t kernel_ss = 2 << 3;
+  SetDSAll(0);
+  SetCSSS(kernel_cs, kernel_ss);
+
+  SetupIdentiryPageTable();
 
   SetLogLevel(kWarn);
 
