@@ -14,6 +14,7 @@
 #include "asmfunc.h"
 #include "queue.hpp"
 #include "segment.hpp"
+#include "paging.hpp"
 
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
