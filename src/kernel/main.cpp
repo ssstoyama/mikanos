@@ -154,7 +154,6 @@ void KernelMainNewStack(
   uintptr_t available_end = 0; // 最後の未使用領域の末尾のアドレス
 
   for (uintptr_t iter = memory_map_base; iter < memory_map_base + memory_map.map_size; iter += memory_map.descriptor_size) {
-    Log(kInfo, "iter=%p\n", iter);
     auto desc = reinterpret_cast<const MemoryDescriptor *>(iter);
     if (desc->physical_start > available_end) {
       memory_manager->MarkAllocated(
@@ -163,7 +162,6 @@ void KernelMainNewStack(
       );
     }
 
-    Log(kInfo, "desc->number_of_pages=%d\n", desc->number_of_pages);
     const auto physical_end = desc->physical_start + desc->number_of_pages*kUEFIPageSize;
     if (IsAvailable(static_cast<MemoryType>(desc->type))) {
       available_end = physical_end;
@@ -176,6 +174,11 @@ void KernelMainNewStack(
   }
 
   memory_manager->SetMemoryRange(FrameID{ 1 }, FrameID{ available_end / kBytesPerFrame });
+
+  if (auto err = InitializeHeap(*memory_manager)) {
+    Log(kError, "failed to allocate heap (%s) at %s:%d\n", err.Name(), err.File(), err.Line());
+    exit(1);
+  }
 
   SetLogLevel(kWarn);
 

@@ -73,3 +73,5 @@ private:
     bool getBit(FrameID frame) const;
     void setBit(FrameID frame, bool allocated);
 };
+
+Error InitializeHeap(BitmapMemoryManager &memory_manager);
