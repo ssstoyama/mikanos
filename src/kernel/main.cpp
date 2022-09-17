@@ -15,6 +15,7 @@
 #include "queue.hpp"
 #include "segment.hpp"
 #include "paging.hpp"
+#include "memory_manager.hpp"
 
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -30,6 +31,9 @@ PixelWriter* pixel_writer;
 
 char console_buf[sizeof(Console)];
 Console* console;
+
+char memory_manager_buf[sizeof(BitmapMemoryManager)];
+BitmapMemoryManager *memory_manager;
 
 int printk(const char* format, ...) {
   va_list ap;
@@ -133,27 +137,7 @@ void KernelMainNewStack(
     *pixel_writer, kDesktopFGColor, kDesktopBGColor
   };
   printk("Welcome to ssstoyama!\n");
-  SetLogLevel(kDebug);
-
-  const std::array<MemoryType, 3> available_memory_types{
-    MemoryType::kEfiBootServicesCode,
-    MemoryType::kEfiBootServicesData,
-    MemoryType::kEfiConventionalMemory,
-  };
-  Log(kDebug, "memory_map: %p\n", &memory_map);
-
-  for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
-       iter < reinterpret_cast<uintptr_t>(memory_map.buffer)+memory_map.map_size;
-       iter += memory_map.descriptor_size) {
-    auto desc = reinterpret_cast<MemoryDescriptor*>(iter);
-    for (int i = 0; i < available_memory_types.size(); ++i) {
-      if (desc->type == available_memory_types[i]) {
-        Log(kDebug, "type = %u, phys = %08lx - %08lx, pages = %lu, attr = %08lx\n",
-          desc->type, desc->physical_start, desc->physical_start+desc->number_of_pages*4096 - 1,
-          desc->number_of_pages, desc->attribute);
-      }
-    }
-  }
+  SetLogLevel(kInfo);
 
   SetupSegments();
 
@@ -163,6 +147,35 @@ void KernelMainNewStack(
   SetCSSS(kernel_cs, kernel_ss);
 
   SetupIdentiryPageTable();
+
+  ::memory_manager = new(memory_manager_buf) BitmapMemoryManager;
+
+  const auto memory_map_base = reinterpret_cast<uintptr_t>(memory_map.buffer);
+  uintptr_t available_end = 0; // 最後の未使用領域の末尾のアドレス
+
+  for (uintptr_t iter = memory_map_base; iter < memory_map_base + memory_map.map_size; iter += memory_map.descriptor_size) {
+    Log(kInfo, "iter=%p\n", iter);
+    auto desc = reinterpret_cast<const MemoryDescriptor *>(iter);
+    if (desc->physical_start > available_end) {
+      memory_manager->MarkAllocated(
+        FrameID{available_end / kBytesPerFrame},
+        (desc->physical_start - available_end) / kBytesPerFrame
+      );
+    }
+
+    Log(kInfo, "desc->number_of_pages=%d\n", desc->number_of_pages);
+    const auto physical_end = desc->physical_start + desc->number_of_pages*kUEFIPageSize;
+    if (IsAvailable(static_cast<MemoryType>(desc->type))) {
+      available_end = physical_end;
+    } else {
+      memory_manager->MarkAllocated(
+        FrameID{desc->physical_start / kBytesPerFrame},
+        desc->number_of_pages * kUEFIPageSize / kBytesPerFrame
+      );
+    }
+  }
+
+  memory_manager->SetMemoryRange(FrameID{ 1 }, FrameID{ available_end / kBytesPerFrame });
 
   SetLogLevel(kWarn);
 
