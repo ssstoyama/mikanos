@@ -12,6 +12,7 @@ ln -sf ${workspace}/src/MikanLoaderPkg ${edk2}
 cd ${edk2}
 source edksetup.sh
 cd ${current}
+ln -sf ${edk2}/Build .
 
 # configure clang (kernel build)
 source /home/vscode/osbook/devenv/buildenv.sh
