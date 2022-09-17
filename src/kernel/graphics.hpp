@@ -7,19 +7,33 @@ struct PixelColor {
 };
 
 class PixelWriter {
- public:
-  PixelWriter(const FrameBufferConfig& config) : config_{config} {
-  }
+public:
   virtual ~PixelWriter() = default;
   virtual void Write(int x, int y, const PixelColor& c) = 0;
+  virtual int Width() const = 0;
+  virtual int Height() const = 0;
+};
 
- protected:
+class FrameBufferWriter : public PixelWriter {
+private:
+  const FrameBufferConfig& config_;
+
+public:
+  FrameBufferWriter(const FrameBufferConfig &config)
+    : config_{config} {}
+
+  ~FrameBufferWriter() override = default;
+  int Width() const override {
+    return config_.horizontal_resolution;
+  }
+  int Height() const override {
+    return config_.vertical_resolution;
+  }
+
+protected:
   uint8_t* PixelAt(int x, int y) {
     return config_.frame_buffer + 4 * (config_.pixels_per_scan_line * y + x);
   }
-
- private:
-  const FrameBufferConfig& config_;
 };
 
 class RGBResv8BitPerColorPixelWriter : public PixelWriter {
