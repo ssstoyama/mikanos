@@ -37,3 +37,7 @@ void WriteString(PixelWriter& writer, int x, int y, const char* s, const PixelCo
     WriteAscii(writer, x + 8 * i, y, s[i], color);
   }
 }
+
+void WriteString(PixelWriter& writer, Vector2D<int> pos, const char* s, const PixelColor& color) {
+  WriteString(writer, pos.x, pos.y, s, color);
+}

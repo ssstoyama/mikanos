@@ -53,6 +53,8 @@ public:
     const PixelColor &At(Vector2D<int>) const;
     void Write(Vector2D<int> pos, PixelColor color);
 
+    void Move(Vector2D<int> dst_pos, const Rectangle<int> &src);
+
     int Width() const;
     int Height() const;
 
