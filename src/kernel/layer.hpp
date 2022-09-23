@@ -69,6 +69,8 @@ public:
     void UpDown(unsigned int id, int new_height);
     /** @brief レイヤーを非表示にする。 */
     void Hide(unsigned int id);
+
+    Layer *FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const;
 };
 
 // global LayerManager
