@@ -58,6 +58,10 @@ Layer *LayerManager::findLayer(unsigned int id) {
 
 void LayerManager::SetWriter(FrameBuffer *screen) {
     screen_ = screen;
+
+    FrameBufferConfig back_config = screen->Config();
+    back_config.frame_buffer = nullptr;
+    back_buffer_.Initialize(back_config);
 }
 
 Layer &LayerManager::NewLayer() {
@@ -73,8 +77,9 @@ void LayerManager::Draw() const {
 
 void LayerManager::Draw(const Rectangle<int> &area) const {
     for (auto layer: layer_stack_) {
-        layer->DrawTo(*screen_, area);
+        layer->DrawTo(back_buffer_, area);
     }
+    screen_->Copy(area.pos, back_buffer_, area);
 }
 
 void LayerManager::Draw(unsigned int id) const {
@@ -87,9 +92,10 @@ void LayerManager::Draw(unsigned int id) const {
             draw = true;
         }
         if (draw) {
-            layer->DrawTo(*screen_, window_area);
+            layer->DrawTo(back_buffer_, window_area);
         }
     }
+    screen_->Copy(window_area.pos, back_buffer_, window_area);
 }
 
 void LayerManager::Move(unsigned int id, Vector2D<int> new_position) {

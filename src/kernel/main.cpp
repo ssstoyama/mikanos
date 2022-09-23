@@ -47,7 +47,6 @@ void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
   mouse_position = ElementMax(newpos, {0, 0});
 
   layer_manager->Move(mouse_layer_id, mouse_position);
-  layer_manager->Draw();
 }
 
 int printk(const char* format, ...) {

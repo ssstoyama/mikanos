@@ -36,6 +36,7 @@ public:
 class LayerManager {
 private:
     FrameBuffer *screen_{nullptr};
+    mutable FrameBuffer back_buffer_{};
     std::vector<std::unique_ptr<Layer>> layers_{};
     /** 先頭が最背面、末尾が最前面 */
     std::vector<Layer *> layer_stack_{};
