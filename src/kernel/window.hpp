@@ -44,6 +44,7 @@ public:
      * @param position writer の左上を基準とした描画位置
      */
     void DrawTo(FrameBuffer &dst, Vector2D<int> position);
+    void DrawTo(FrameBuffer &dst, Vector2D<int> position, const Rectangle<int> &area);
 
     /** @brief 透過色を設定する。 */
     void SetTransparentColor(std::optional<PixelColor> c);
@@ -57,6 +58,7 @@ public:
 
     int Width() const;
     int Height() const;
+    Vector2D<int> Size() const;
 
 private:
     int width_, height_;
