@@ -1,6 +1,16 @@
 #include "timer.hpp"
 #include "interrupt.hpp"
 
+void TimerManager::Tick() {
+    ++tick_;
+}
+
+unsigned long TimerManager::CurrentTick() const {
+    return tick_;
+}
+
+TimerManager* timer_manager;
+
 namespace {
     const uint32_t kCountMax = 0x000fffffu;
     // 割り込みの発生方法の設定など
@@ -14,12 +24,14 @@ namespace {
 }
 
 void InitializeLAPICTimer() {
+    timer_manager = new TimerManager();
+
     divide_config = 0b1011u; // devide 1:1
     // 0-7   bit: 割り込みベクタ. 0x41 セット
     // 16    bit: 割り込みマスク. 0=割り込み許可 セット
     // 17-18 bit: タイマー動作モード. 1=周期 セット
     lvt_timer = (0b010u << 16) | InterruptVector::kLAPICTimer;
-    initial_count = kCountMax;
+    initial_count = 0x1000000u;
 }
 
 void StartLAPICTimer() {
@@ -32,4 +44,8 @@ uint32_t LAPITimerElapsed() {
 
 void StopLAPITimer() {
     initial_count = 0;
+}
+
+void LAPICTimerOnInterrupt() {
+    timer_manager->Tick();
 }
