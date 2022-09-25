@@ -2,6 +2,7 @@
 #include "segment.hpp"
 #include "asmfunc.h"
 #include "timer.hpp"
+#include "logger.hpp"
 
 std::array<InterruptDescriptor, 256> idt;
 
