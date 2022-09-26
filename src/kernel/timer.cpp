@@ -1,5 +1,6 @@
 #include "timer.hpp"
 #include "interrupt.hpp"
+#include "acpi.hpp"
 
 TimerManager::TimerManager(std::deque<Message> &msg_queue):
     msg_queue_{msg_queue} {
@@ -42,6 +43,7 @@ unsigned long Timer::Timeout() const {
 int Timer::Value() const { return value_; }
 
 TimerManager* timer_manager;
+unsigned long lapic_timer_freq;
 
 namespace {
     const uint32_t kCountMax = 0xffffffffu;
@@ -59,11 +61,23 @@ void InitializeLAPICTimer(std::deque<Message>& msg_queue) {
     timer_manager = new TimerManager(msg_queue);
 
     divide_config = 0b1011u; // devide 1:1
+    // 16    bit: 割り込みマスク. 1=割り込み不許可 セット
+    lvt_timer = 0b001u << 16; // masked;
+
+    StartLAPICTimer();
+    acpi::WaitMilliseconds(100); // 0.1s 待機
+    const auto elapsed = LAPICTimerElapsed(); // 0.1s 分のカウント計測
+    StopLAPICTimer();
+
+    lapic_timer_freq = static_cast<unsigned long>(elapsed) * 10; // 0.1s * 10 = 1s 分のカウントに変換
+
+    divide_config = 0b1011u;
     // 0-7   bit: 割り込みベクタ. 0x41 セット
     // 16    bit: 割り込みマスク. 0=割り込み許可 セット
     // 17-18 bit: タイマー動作モード. 1=周期 セット
     lvt_timer = (0b010u << 16) | InterruptVector::kLAPICTimer;
-    initial_count = 0x1000000u;
+    // 1 / kTimerFreq 秒ごとに割り込みが発生する
+    initial_count = lapic_timer_freq / kTimerFreq;
 }
 
 void StartLAPICTimer() {

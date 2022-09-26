@@ -33,7 +33,10 @@ private:
     std::deque<Message>& msg_queue_;
 };
 
+const int kTimerFreq = 100;
+
 extern TimerManager* timer_manager;
+extern unsigned long lapic_timer_freq;
 
 void InitializeLAPICTimer(std::deque<Message>& msg_queue);
 void StartLAPICTimer();
