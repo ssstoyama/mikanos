@@ -23,6 +23,7 @@
 #include "message.hpp"
 #include "acpi.hpp"
 #include "keyboard.hpp"
+#include "task.hpp"
 
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -44,14 +45,6 @@ int printk(const char* format, ...) {
   console->PutString(s);
   return result;
 }
-
-struct TaskContext {
-  uint64_t cr3, rip, rflags, reserved1;            // offset 0x00
-  uint64_t cs, ss, fs, gs;                         // offset 0x20
-  uint64_t rax, rbx, rcx, rdx, rdi, rsi, rsp, rbp; // offset 0x40
-  uint64_t r8, r9, r10, r11, r12, r13, r14, r15;   // offset 0x80
-  std::array<uint8_t, 512> fxsave_area;            // offset 0xc0
-} __attribute__((packed));
 
 alignas(16) TaskContext task_a_ctx, task_b_ctx;
 
@@ -98,8 +91,6 @@ void TaskB(int task_id, int data) {
     FillRectangle(*task_b_window->Writer(), {24, 28}, {8*10, 16}, toColor(0xc6c6c6u));
     WriteString(*task_b_window->Writer(), {24, 28}, str, toColor(0));
     layer_manager->Draw(task_b_window_layer_id);
-
-    SwitchContext(&task_a_ctx, &task_b_ctx);
   }
 }
 
@@ -215,7 +206,7 @@ void KernelMainNewStack(
   memset(&task_b_ctx, 0, sizeof(task_b_ctx));
   task_b_ctx.rip = reinterpret_cast<uint64_t>(TaskB);
   task_b_ctx.rdi = 1;
-  task_b_ctx.rsi = 42;
+  task_b_ctx.rsi = 43;
 
   task_b_ctx.cr3 = GetCR3();
   task_b_ctx.rflags = 0x202;
@@ -225,6 +216,8 @@ void KernelMainNewStack(
 
   // MXCSR のすべての例外をマスクする
   *reinterpret_cast<uint32_t*>(&task_b_ctx.fxsave_area[24]) = 0x1f80u;
+
+  InitializeTask();
 
   char str[128];
 
@@ -241,8 +234,7 @@ void KernelMainNewStack(
     __asm__("cli");
     if (main_queue->size() == 0) {
       __asm__("sti");
-      // __asm__("hlt");
-      SwitchContext(&task_b_ctx, &task_a_ctx);
+      __asm__("hlt");
       continue;
     }
 
