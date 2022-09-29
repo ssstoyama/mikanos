@@ -3,8 +3,7 @@
 #include "acpi.hpp"
 #include "task.hpp"
 
-TimerManager::TimerManager(std::deque<Message> &msg_queue):
-    msg_queue_{msg_queue} {
+TimerManager::TimerManager() {
     timers_.push(Timer{std::numeric_limits<unsigned long>::max(), -1});
 }
 
@@ -32,7 +31,8 @@ bool TimerManager::Tick() {
         Message msg{Message::kTimerTimeout};
         msg.arg.timer.timeout = t.Timeout();
         msg.arg.timer.value = t.Value();
-        msg_queue_.push_back(msg);
+        // メインタスクのID=1
+        task_manager->SendMessage(1, msg);
 
         timers_.pop();
     }
@@ -68,8 +68,8 @@ namespace {
     volatile uint32_t &divide_config = *reinterpret_cast<uint32_t *>(0xfee003e0);
 }
 
-void InitializeLAPICTimer(std::deque<Message>& msg_queue) {
-    timer_manager = new TimerManager(msg_queue);
+void InitializeLAPICTimer() {
+    timer_manager = new TimerManager();
 
     divide_config = 0b1011u; // devide 1:1
     // 16    bit: 割り込みマスク. 1=割り込み不許可 セット

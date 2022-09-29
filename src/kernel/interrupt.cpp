@@ -3,6 +3,7 @@
 #include "asmfunc.h"
 #include "timer.hpp"
 #include "logger.hpp"
+#include "task.hpp"
 
 std::array<InterruptDescriptor, 256> idt;
 
@@ -23,11 +24,10 @@ void NotifyEndOfInterrupt() {
 }
 
 namespace {
-    std::deque<Message> *msg_queue;
-
     __attribute__((interrupt))
     void intHandlerXHCI(InterruptFrame* frame) {
-        msg_queue->push_back(Message{ Message::kInterruptXHCI });
+        // メインタスクのID=1
+        task_manager->SendMessage(1, Message{Message::kInterruptXHCI});
         NotifyEndOfInterrupt();
     }
 
@@ -37,9 +37,7 @@ namespace {
     }
 }
 
-void InitializeInterrupt(std::deque<Message> *msg_queue) {
-    ::msg_queue = msg_queue;
-
+void InitializeInterrupt() {
     SetIDTEntry(idt[InterruptVector::kXHCI], MakeIDTAttr(DescriptorType::kInterruptGate, 0),
         reinterpret_cast<uint64_t>(intHandlerXHCI), kKernelCS);
     SetIDTEntry(idt[InterruptVector::kLAPICTimer], MakeIDTAttr(DescriptorType::kInterruptGate, 0),
