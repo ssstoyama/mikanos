@@ -92,13 +92,6 @@ void TaskB(uint64_t task_id, int64_t data) {
   }
 }
 
-void TaskIdle(uint64_t task_id, int64_t data) {
-  printk("TaskIdle: task_id=%lu, data=%lu\n", task_id, data);
-  while (true) {
-    __asm__("hlt");
-  }
-}
-
 std::shared_ptr<Window> text_window;
 unsigned int text_window_layer_id;
 
@@ -205,8 +198,6 @@ void KernelMainNewStack(
     .InitContext(TaskB, 45)
     .Wakeup()
     .ID();
-  task_manager->NewTask().InitContext(TaskIdle, 0xdeadbeef).Wakeup();
-  task_manager->NewTask().InitContext(TaskIdle, 0xcafebabe).Wakeup();
 
   // pci devices
   usb::xhci::Initialize();
@@ -227,8 +218,8 @@ void KernelMainNewStack(
 
     __asm__("cli");
 
-    auto m = main_task.ReceiveMessage();
-    if (!m) {
+    auto msg = main_task.ReceiveMessage();
+    if (!msg) {
       main_task.Sleep();
       __asm__("sti");
       continue;
@@ -236,15 +227,14 @@ void KernelMainNewStack(
 
     __asm__("sti");
 
-    auto &msg = *m;
-    switch (msg.type) {
+    switch (msg->type) {
     case Message::kInterruptXHCI:
       usb::xhci::ProcessEvents();
       break;
     case Message::kTimerTimeout:
-      if (msg.arg.timer.value == kTextboxCursorTimer) {
+      if (msg->arg.timer.value == kTextboxCursorTimer) {
         __asm__("cli");
-        timer_manager->AddTimer(Timer{msg.arg.timer.timeout+kTimer055ec, kTextboxCursorTimer});
+        timer_manager->AddTimer(Timer{msg->arg.timer.timeout+kTimer055ec, kTextboxCursorTimer});
         __asm__("sti");
         textbox_cursor_visible = !textbox_cursor_visible;
         DrawTextCursor(textbox_cursor_visible);
@@ -252,8 +242,8 @@ void KernelMainNewStack(
       }
       break;
     case Message::kKeyPush:
-      if ((msg.arg.keyboard.modifier & (kKbdLControlBitMask | kKbdRControlBitMask)) != 0) {
-        if (msg.arg.keyboard.ascii == 's') {
+      if ((msg->arg.keyboard.modifier & (kKbdLControlBitMask | kKbdRControlBitMask)) != 0) {
+        if (msg->arg.keyboard.ascii == 's') {
           // Ctrl + S
           printk("sleep TaskB: %s\n", task_manager->Sleep(task_b_id).Name());
         } else {
@@ -262,10 +252,10 @@ void KernelMainNewStack(
         }
       }
 
-      InputTextWindow(msg.arg.keyboard.ascii);
+      InputTextWindow(msg->arg.keyboard.ascii);
       break;
     default:
-      Log(kError, "Unknown message type: %d\n", msg.type);
+      Log(kError, "Unknown message type: %d\n", msg->type);
     }
   }
 }

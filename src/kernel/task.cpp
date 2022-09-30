@@ -6,12 +6,20 @@
 #include "timer.hpp"
 #include "asmfunc.h"
 #include "segment.hpp"
+#include "logger.hpp"
 
 namespace {
     template <class T, class U>
     void erase(T &container, const U &value) {
         auto it = std::remove(container.begin(), container.end(), value);
         container.erase(it, container.end());
+    }
+
+    void taskIdle(uint64_t task_id, int64_t data) {
+        SetLogLevel(kDebug);
+        Log(kDebug, ".");
+        SetLogLevel(kWarn);
+        while (true) __asm__("hlt");
     }
 }
 
@@ -104,6 +112,12 @@ TaskManager::TaskManager() {
         .setLevel(current_level_)
         .setRunning(true);
     running_[current_level_].push_back(&task);
+
+    Task &idle = NewTask()
+        .InitContext(taskIdle, 0)
+        .setLevel(0)
+        .setRunning(true);
+    running_[0].push_back(&idle);
 }
 
 Task& TaskManager::NewTask() {
