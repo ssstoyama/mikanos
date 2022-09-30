@@ -7,6 +7,14 @@
 #include "asmfunc.h"
 #include "segment.hpp"
 
+namespace {
+    template <class T, class U>
+    void erase(T &container, const U &value) {
+        auto it = std::remove(container.begin(), container.end(), value);
+        container.erase(it, container.end());
+    }
+}
+
 TaskManager *task_manager;
 
 void InitializeTask() {
@@ -20,6 +28,16 @@ void InitializeTask() {
 }
 
 Task::Task(uint64_t id): id_{id} {};
+
+Task& Task::setLevel(int level) {
+    level_ = level;
+    return *this;
+}
+
+Task& Task::setRunning(bool running) {
+    running_ = running;
+    return *this;
+}
 
 Task &Task::InitContext(TaskFunc *f, int64_t data) {
     const size_t stack_size = kDefaultStackBytes / sizeof(stack_[0]);
@@ -49,6 +67,13 @@ uint64_t Task::ID() const {
     return id_;
 }
 
+bool Task::Running() const {
+    return running_;
+}
+int Task::Level() const {
+    return level_;
+}
+
 Task& Task::Sleep() {
     task_manager->Sleep(this);
     return *this;
@@ -75,7 +100,10 @@ std::optional<Message> Task::ReceiveMessage() {
 }
 
 TaskManager::TaskManager() {
-    running_.push_back(&NewTask());
+    Task &task = NewTask()
+        .setLevel(current_level_)
+        .setRunning(true);
+    running_[current_level_].push_back(&task);
 }
 
 Task& TaskManager::NewTask() {
@@ -84,29 +112,46 @@ Task& TaskManager::NewTask() {
 }
 
 void TaskManager::SwitchTask(bool current_sleep) {
-    Task *current_task = running_.front();
-    running_.pop_front();
-    if (!current_sleep) {
-        running_.push_back(current_task);
-    }
-    Task *next_task = running_.front();
+    auto &level_queue = running_[current_level_];
+    Task *current_task = level_queue.front();
+    level_queue.pop_front();
 
+    if (!current_sleep) {
+        level_queue.push_back(current_task);
+    }
+
+    if (level_queue.empty()) {
+        level_changed_ = true;
+    }
+
+    if (level_changed_) {
+        level_changed_ = false;
+        for (int level = kMaxLevel; level >= 0; --level) {
+            if (!running_[level].empty()) {
+                current_level_ = level;
+                break;
+            }
+        }
+    }
+
+    Task *next_task = running_[current_level_].front();
     SwitchContext(&next_task->Context(), &current_task->Context());
 }
 
 void TaskManager::Sleep(Task *task) {
-    auto it = std::find(running_.begin(), running_.end(), task);
+    if (!task->Running()) {
+        return;
+    }
 
-    if (it == running_.begin()) {
+    task->setRunning(false);
+
+    if (task == running_[current_level_].front()) {
+        // Task 実行中の場合
         SwitchTask(true);
         return;
     }
 
-    if (it == running_.end()) {
-        return;
-    }
-
-    running_.erase(it);
+    erase(running_[task->Level()], task);
 }
 
 Error TaskManager::Sleep(uint64_t id) {
@@ -118,24 +163,36 @@ Error TaskManager::Sleep(uint64_t id) {
     return MAKE_ERROR(Error::kSuccess);
 }
 
-void TaskManager::Wakeup(Task *task) {
-    auto it = std::find(running_.begin(), running_.end(), task);
-    if (it == running_.end()) {
-        running_.push_back(task);
+void TaskManager::Wakeup(Task *task, int level) {
+    if (task->Running()) {
+        changeLevelRunning(task, level);
+        return;
+    }
+
+    if (level < 0) {
+        level = task->Level();
+    }
+
+    task->setLevel(level);
+    task->setRunning(true);
+
+    running_[level].push_back(task);
+    if (level > current_level_) {
+        level_changed_ = true;
     }
 }
 
-Error TaskManager::Wakeup(uint64_t id) {
+Error TaskManager::Wakeup(uint64_t id, int level) {
     auto it = std::find_if(tasks_.begin(), tasks_.end(), [id](const auto &t) { return t->ID() == id; });
     if (it == tasks_.end()) {
         return MAKE_ERROR(Error::kNoSuchTask);
     }
-    Wakeup(it->get());
+    Wakeup(it->get(), level);
     return MAKE_ERROR(Error::kSuccess);
 }
 
 Task& TaskManager::CurrentTask() {
-    return *running_.front();
+    return *running_[current_level_].front();
 }
 
 Error TaskManager::SendMessage(uint64_t id, const Message &msg) {
@@ -148,4 +205,30 @@ Error TaskManager::SendMessage(uint64_t id, const Message &msg) {
 
     (*it)->SendMessage(msg);
     return MAKE_ERROR(Error::kSuccess);
+}
+
+void TaskManager::changeLevelRunning(Task *task, int level) {
+    if (level < 0 || level == task->Level()) {
+        return;
+    }
+
+    if (task != running_[current_level_].front()) {
+        // 現在実行中でない場合
+        erase(running_[task->Level()], task);
+        running_[level].push_back(task);
+        task->setLevel(level);
+        if (level > current_level_) {
+            level_changed_ = true;
+        }
+        return;
+    }
+
+    // 現在実行中の場合
+    running_[current_level_].pop_front();
+    running_[level].push_front(task);
+    task->setLevel(level);
+    if (level < current_level_) {
+        level_changed_ = true;
+    }
+    current_level_ = level;
 }
