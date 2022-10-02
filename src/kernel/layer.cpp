@@ -54,7 +54,7 @@ bool Layer::IsDraggable() const {
 
 // LayerManager
 
-Layer *LayerManager::findLayer(unsigned int id) {
+Layer *LayerManager::FindLayer(unsigned int id) {
     auto pred = [id](const std::unique_ptr<Layer> &elem) {
         return elem->ID() == id;
     };
@@ -110,16 +110,16 @@ void LayerManager::Draw(unsigned int id) const {
 }
 
 void LayerManager::Move(unsigned int id, Vector2D<int> new_position) {
-    auto layer = findLayer(id);
+    auto layer = FindLayer(id);
     const auto window_size = layer->GetWindow()->Size();
     const auto old_pos = layer->GetPosition();
-    findLayer(id)->Move(new_position);
+    layer->Move(new_position);
     Draw({old_pos, window_size});
     Draw(id);
 }
 
 void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff) {
-    auto layer = findLayer(id);
+    auto layer = FindLayer(id);
     const auto window_size = layer->GetWindow()->Size();
     const auto old_pos = layer->GetPosition();
     layer->MoveRelative(pos_diff);
@@ -137,7 +137,7 @@ void LayerManager::UpDown(unsigned int id, int new_height) {
         new_height = layer_stack_.size();
     }
 
-    auto layer = findLayer(id);
+    auto layer = FindLayer(id);
     auto old_pos = std::find(layer_stack_.begin(), layer_stack_.end(), layer);
     auto new_pos = layer_stack_.begin() + new_height;
     if (old_pos == layer_stack_.end()) {
@@ -152,14 +152,23 @@ void LayerManager::UpDown(unsigned int id, int new_height) {
 }
 
 void LayerManager::Hide(unsigned int id) {
-    auto layer = findLayer(id);
+    auto layer = FindLayer(id);
     auto pos = std::find(layer_stack_.begin(), layer_stack_.end(), layer);
     if (pos != layer_stack_.end()) {
         layer_stack_.erase(pos);
     }
 }
 
-Layer *LayerManager::FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const {
+int LayerManager::GetHeight(unsigned int id) {
+    for (int h = 0; h < layer_stack_.size(); ++h) {
+        if (layer_stack_[h]->ID() == id) {
+            return h;
+        }
+    }
+    return -1;
+}
+
+Layer* LayerManager::FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const {
     auto pred = [pos, exclude_id](Layer *layer) {
         if (layer->ID() == exclude_id) {
             return false;
@@ -187,7 +196,34 @@ namespace {
     FrameBuffer *screen;
 }
 
+ActiveLayer::ActiveLayer(LayerManager &manager): manager_{manager} {}
+
+void ActiveLayer::SetMouseLayer(unsigned int mouse_layer) {
+    mouse_layer_ = mouse_layer;
+}
+
+void ActiveLayer::Activate(unsigned int layer_id) {
+    if (active_layer_ == layer_id) {
+        return;
+    }
+
+    if (active_layer_ > 0) {
+        Layer *layer = manager_.FindLayer(active_layer_);
+        layer->GetWindow()->Deactivate();
+        manager_.Draw(active_layer_);
+    }
+
+    active_layer_ = layer_id;
+    if (active_layer_ > 0) {
+        Layer *layer = manager_.FindLayer(active_layer_);
+        layer->GetWindow()->Activate();
+        manager_.UpDown(active_layer_, manager_.GetHeight(mouse_layer_) - 1);
+        manager_.Draw(active_layer_);
+    }
+}
+
 LayerManager *layer_manager;
+ActiveLayer *active_layer;
 
 void InitializeLayer() {
     const auto screen_size = ScreenSize();
@@ -204,6 +240,7 @@ void InitializeLayer() {
     if (auto err = screen->Initialize(screen_config)) {
         Log(kError, "Failed to initialize frame buffer (%s) at %s:%d\n",
             err.Name(), err.File(), err.Line());
+        exit(1);
     }
 
     layer_manager = new LayerManager();
@@ -220,6 +257,8 @@ void InitializeLayer() {
 
     layer_manager->UpDown(bglayer_id, 0);
     layer_manager->UpDown(console->LayerID(), 1);
+
+    active_layer = new ActiveLayer(*layer_manager);
 }
 
 void ProcessLayerMessage(const Message &msg) {

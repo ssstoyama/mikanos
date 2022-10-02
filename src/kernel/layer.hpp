@@ -47,8 +47,6 @@ private:
     std::vector<Layer *> layer_stack_{};
     unsigned int latest_id_{0};
 
-    Layer *findLayer(unsigned int id);
-
 public:
     /** @brief 描画先を設定する。 */
     void SetWriter(FrameBuffer *screen);
@@ -74,12 +72,27 @@ public:
     void UpDown(unsigned int id, int new_height);
     /** @brief レイヤーを非表示にする。 */
     void Hide(unsigned int id);
+    int GetHeight(unsigned int id);
 
-    Layer *FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const;
+    Layer* FindLayer(unsigned int id);
+    Layer* FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const;
 };
 
-// global LayerManager
+class ActiveLayer {
+public:
+    ActiveLayer(LayerManager &manager);
+    void SetMouseLayer(unsigned int mouse_layer);
+    void Activate(unsigned int layer_id);
+    unsigned int GetActive() const { return active_layer_; }
+
+private:
+    LayerManager &manager_;
+    unsigned int active_layer_{0};
+    unsigned int mouse_layer_{0};
+};
+
 extern LayerManager *layer_manager;
+extern ActiveLayer *active_layer;
 
 void InitializeLayer();
 void ProcessLayerMessage(const Message &msg);
