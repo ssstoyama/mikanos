@@ -1,12 +1,22 @@
 #pragma once
 
+enum class LayerOperation {
+    Move,
+    MoveRelative,
+    Draw,
+};
+
 struct Message {
     enum Type {
         kInterruptXHCI,
         kInterruptLAPICTimer,
         kTimerTimeout,
         kKeyPush,
+        kLayer,
+        kLayerFinish,
     } type;
+
+    uint64_t src_task;
 
     union {
         struct {
@@ -19,5 +29,11 @@ struct Message {
             uint8_t keycode;
             char ascii;
         } keyboard;
+
+        struct  {
+            LayerOperation op;
+            unsigned int layer_id;
+            int x, y;
+        } layer;
     } arg;
 };
