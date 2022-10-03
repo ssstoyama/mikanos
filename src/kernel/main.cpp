@@ -24,6 +24,7 @@
 #include "acpi.hpp"
 #include "keyboard.hpp"
 #include "task.hpp"
+#include "terminal.hpp"
 
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -70,7 +71,7 @@ void InitializeTaskBWindow() {
   task_b_window_layer_id = layer_manager->NewLayer()
     .SetWindow(task_b_window)
     .SetDraggable(true)
-    .Move({400, 400})
+    .Move({100, 100})
     .ID();
 
   layer_manager->UpDown(task_b_window_layer_id, std::numeric_limits<int>::max());
@@ -128,7 +129,7 @@ void InitializeTextWindow() {
   text_window_layer_id = layer_manager->NewLayer()
     .SetWindow(text_window)
     .SetDraggable(true)
-    .Move({ 350, 150 })
+    .Move({ 500, 100 })
     .ID();
 
   layer_manager->UpDown(text_window_layer_id, std::numeric_limits<int>::max());
@@ -216,8 +217,13 @@ void KernelMainNewStack(
   InitializeTask();
   Task &main_task = task_manager->CurrentTask();
 
-  const auto task_b_id = task_manager->NewTask()
+  const uint64_t task_b_id = task_manager->NewTask()
     .InitContext(TaskB, 45)
+    .Wakeup()
+    .ID();
+
+  const uint64_t task_terminal_id = task_manager->NewTask()
+    .InitContext(TaskTerminal, 0)
     .Wakeup()
     .ID();
 
@@ -263,6 +269,10 @@ void KernelMainNewStack(
         textbox_cursor_visible = !textbox_cursor_visible;
         DrawTextCursor(textbox_cursor_visible);
         layer_manager->Draw(text_window_layer_id);
+
+        __asm__("cli");
+        task_manager->SendMessage(task_terminal_id, *msg);
+        __asm__("sti");
       }
       break;
     case Message::kKeyPush:
