@@ -32,7 +32,7 @@ Rectangle<int> Terminal::BlinkCursor() {
 
 void Terminal::DrawCursor(bool visible) {
     const auto color = visible ? toColor(0xffffff) : toColor(0);
-    const auto pos = Vector2D<int>{4 + 8*cursor_.x + 5 + 16*cursor_.y};
+    const auto pos = Vector2D<int>{4 + 8*cursor_.x, 5 + 16*cursor_.y};
     FillRectangle(*window_->InnerWriter(), pos, {7, 15}, color);
 }
 
