@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <map>
 #include <algorithm>
 
 #include "graphics.hpp"
@@ -95,6 +96,7 @@ private:
 
 extern LayerManager *layer_manager;
 extern ActiveLayer *active_layer;
+extern std::map<unsigned int, uint64_t> *layer_task_map;
 
 void InitializeLayer();
 void ProcessLayerMessage(const Message &msg);
