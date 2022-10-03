@@ -32,11 +32,11 @@ Rectangle<int> Terminal::BlinkCursor() {
 
 void Terminal::DrawCursor(bool visible) {
     const auto color = visible ? toColor(0xffffff) : toColor(0);
-    FillRectangle(*window_->InnerWriter(), CalcCursorPos(), {7, 15}, color);
+    FillRectangle(*window_->Writer(), CalcCursorPos(), {7, 15}, color);
 }
 
 Vector2D<int> Terminal::CalcCursorPos() const {
-    return TopLevelWindow::kTopLeftMargin + Vector2D<int>{4 + 8*cursor_.x, 5 + 16*cursor_.y};
+    return TopLevelWindow::kTopLeftMargin + Vector2D<int>{4 + 8*cursor_.x, 4 + 16*cursor_.y};
 }
 
 // 再描画範囲を返す
