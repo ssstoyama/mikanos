@@ -55,7 +55,7 @@ namespace fat {
         uint16_t write_time;
         uint16_t write_date;
         uint16_t first_cluster_low;
-        uint16_t file_size;
+        uint32_t file_size;
 
         uint32_t FirstCluster() const {
             return first_cluster_low |

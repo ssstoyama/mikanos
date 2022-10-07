@@ -15,6 +15,10 @@ Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi: src/MikanLoaderPkg/Main.c
 run: Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi src/kernel/kernel.elf
 	${HOME}/osbook/devenv/run_qemu.sh $^
 
+.PHONY: debug
+debug: Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi src/kernel/kernel.elf
+	${HOME}/osbook/devenv/run_dqemu.sh $^
+
 .PHONY: clean
 clean:
 	make -C src/kernel clean
