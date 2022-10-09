@@ -13,7 +13,8 @@ Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi: src/MikanLoaderPkg/Main.c
 
 .PHONY: run
 run: Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi src/kernel/kernel.elf
-	${HOME}/osbook/devenv/run_qemu.sh $^
+	# ${HOME}/osbook/devenv/run_qemu.sh $^
+	./build.sh run
 
 .PHONY: debug
 debug: Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi src/kernel/kernel.elf
