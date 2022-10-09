@@ -2,7 +2,7 @@
 
 make ${MAKE_OPTS:-} -C src/kernel kernel.elf
 
-for MK in $(ls src/kernel/apps/*/Makefile)
+for MK in $(ls src/apps/*/Makefile)
 do
   APP_DIR=$(dirname $MK)
   APP=$(basename $APP_DIR)
