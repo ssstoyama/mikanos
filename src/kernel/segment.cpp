@@ -2,7 +2,7 @@
 #include "asmfunc.h"
 
 namespace {
-    std::array<SegmentDescriptor, 3> gdt;
+    std::array<SegmentDescriptor, 5> gdt;
 
     void setCodeSegment(
         SegmentDescriptor &desc,
@@ -49,6 +49,8 @@ void SetupSegments() {
     gdt[0].data = 0; // unused
     setCodeSegment(gdt[1], DescriptorType::kExecuteRead, 0, 0, 0xfffff);
     setDataSegment(gdt[2], DescriptorType::kReadWrite, 0, 0, 0xfffff);
+    setCodeSegment(gdt[3], DescriptorType::kExecuteRead, 3, 0, 0xfffff);
+    setDataSegment(gdt[4], DescriptorType::kReadWrite, 3, 0, 0xfffff);
     LoadGDT(sizeof(gdt)-1, reinterpret_cast<uintptr_t>(&gdt[0]));
 }
 
