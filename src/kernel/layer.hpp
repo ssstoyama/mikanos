@@ -31,7 +31,7 @@ public:
 
     /** @brief writer に現在設定されているウィンドウの内容を描画する。 */
     void DrawTo(FrameBuffer &screen) const;
-    void DrawTo(FrameBuffer &screen, const Rectangle<int> &area);
+    void DrawTo(FrameBuffer &screen, const Rectangle<int> &area) const;
 
     Vector2D<int> GetPosition() const;
 

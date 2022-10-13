@@ -35,7 +35,7 @@ void Layer::DrawTo(FrameBuffer &screen) const {
     }
 }
 
-void Layer::DrawTo(FrameBuffer &screen, const Rectangle<int> &area) {
+void Layer::DrawTo(FrameBuffer &screen, const Rectangle<int> &area) const {
     if (window_) {
         window_->DrawTo(screen, pos_, area);
     }
@@ -270,6 +270,7 @@ void InitializeLayer() {
     layer_manager->UpDown(console->LayerID(), 1);
 
     active_layer = new ActiveLayer(*layer_manager);
+    layer_task_map = new std::map<unsigned int, uint64_t>();
 }
 
 void ProcessLayerMessage(const Message &msg) {
