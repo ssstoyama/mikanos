@@ -60,7 +60,8 @@ public:
 
     TaskManager();
     Task& NewTask();
-    void SwitchTask(bool current_sleep=false);
+    void SwitchTask(const TaskContext& current_ctx);
+    Task* RotateCurrentRunQueue(bool current_sleep);
 
     void Sleep(Task *task);
     Error Sleep(uint64_t id);

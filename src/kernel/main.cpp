@@ -137,6 +137,7 @@ void KernelMainNewStack(
   InitializeSegmentation();
   InitializePaging();
   InitializeMemoryManager(memory_map);
+  InitializeTSS();
 
   SetLogLevel(kWarn);
 

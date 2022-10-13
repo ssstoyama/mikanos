@@ -7,18 +7,14 @@ extern "C" {
     uint32_t IoIn32(uint16_t addr);
     uint64_t GetCS(void);
     void LoadIDT(uint64_t limit, uint64_t offset);
-
-    // load Global Descriptor Table
     void LoadGDT(uint16_t limit, uint64_t offset);
-    // set segment registers
     void SetDSAll(uint16_t value);
-    // set cs and ss
     void SetCSSS(uint16_t cs, uint16_t ss);
-
-    // set page table
     void SetCR3(uint64_t value);
     uint64_t GetCR3();
-
     void SwitchContext(void *next_ctx, void *current_ctx);
+    void RestoreContext(void* ctx);
     void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+    void IntHandlerLAPICTimer();
+    void LoadTR(uint16_t sel);
 }
