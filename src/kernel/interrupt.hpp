@@ -46,6 +46,8 @@ public:
 
 extern std::array<InterruptDescriptor, 256> idt;
 
+const int kISTForTimer = 1;
+
 void SetIDTEntry(InterruptDescriptor& desc,
                  InterruptDescriptorAttribute attr,
                  uint64_t offset,
