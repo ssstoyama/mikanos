@@ -26,6 +26,7 @@
 #include "task.hpp"
 #include "terminal.hpp"
 #include "fat.hpp"
+#include "syscall.hpp"
 
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -162,6 +163,7 @@ void KernelMainNewStack(
   // __asm__("sti");
   bool textbox_cursor_visible = false;
 
+  InitializeSyscall();
   InitializeTask();
   Task &main_task = task_manager->CurrentTask();
 

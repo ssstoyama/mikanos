@@ -24,6 +24,7 @@ OBJS= \
 	task.o \
 	terminal.o \
 	fat.o \
+	syscall.o \
 	usb/memory.o \
 	usb/device.o \
 	usb/classdriver/base.o \
