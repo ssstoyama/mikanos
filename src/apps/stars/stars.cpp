@@ -24,8 +24,9 @@ extern "C" void main(int argc, char** argv) {
     for (int i = 0; i < num_stars; ++i) {
         int x = x_dist(rand_engine);
         int y = y_dist(rand_engine);
-        SyscallWinFillRectangle(layer_id, 4 + x, 24 + y, 2, 2, 0xfff100);
+        SyscallWinFillRectangle(layer_id | LAYER_NO_REDRAW, 4 + x, 24 + y, 2, 2, 0xfff100);
     }
+    SyscallWinRedraw(layer_id);
 
     auto tick_end = SyscallGetCurrentTick();
     printf("%d stars in %lu ms.\n", num_stars, (tick_end.value - tick_start)*1000/timer_freq);
