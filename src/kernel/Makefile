@@ -60,7 +60,7 @@ all: ${TARGET}
 
 
 ${TARGET}: ${OBJS}
-	ld.lld ${LDFLAGS} -o $@ $^ -lc -lc++ -lc++abi
+	ld.lld ${LDFLAGS} -o $@ $^ -lc -lc++ -lc++abi -lm
 
 
 kernel.lst: main.cpp
