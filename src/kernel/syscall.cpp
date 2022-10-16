@@ -176,12 +176,32 @@ namespace syscall {
             }, arg1, arg2, arg3, arg4, arg5, arg6);
           }
 
+    SYSCALL(CloseWindow) {
+        const unsigned int layer_id = arg1 & 0xffff'ffff;
+        const auto layer = layer_manager->FindLayer(layer_id);
+
+        if (layer == nullptr) {
+            return {EBADF, 0};
+        }
+
+        const auto layer_pos = layer->GetPosition();
+        const auto win_size = layer->GetWindow()->Size();
+
+        __asm__("cli");
+        active_layer->Activate(0);
+        layer_manager->RemoveLayer(layer_id);
+        layer_manager->Draw({layer_pos, win_size});
+        __asm__("sti");
+
+        return {0, 0};
+    }
+
     #undef SYSCALL
 }
 
 using SyscallFuncType = syscall::Result (uint64_t, uint64_t, uint64_t,
                                  uint64_t, uint64_t, uint64_t);
-extern "C" std::array<SyscallFuncType*, 9> syscall_table{
+extern "C" std::array<SyscallFuncType*, 10> syscall_table{
     syscall::LogString,
     syscall::PutString,
     syscall::Exit,
@@ -191,6 +211,7 @@ extern "C" std::array<SyscallFuncType*, 9> syscall_table{
     syscall::GetCurrentTick,
     syscall::WinRedraw,
     syscall::WinDrawLine,
+    syscall::CloseWindow,
 };
 
 void InitializeSyscall() {
