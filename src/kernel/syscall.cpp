@@ -10,6 +10,7 @@
 #include "task.hpp"
 #include "terminal.hpp"
 #include "font.hpp"
+#include "timer.hpp"
 
 namespace syscall {
     struct Result {
@@ -114,18 +115,23 @@ namespace syscall {
             }, arg1, arg2, arg3, arg4, arg5, arg6);
     }
 
+    SYSCALL(GetCurrentTick) {
+        return { timer_manager->CurrentTick(), kTimerFreq };
+    }
+
     #undef SYSCALL
 }
 
 using SyscallFuncType = syscall::Result (uint64_t, uint64_t, uint64_t,
                                  uint64_t, uint64_t, uint64_t);
-extern "C" std::array<SyscallFuncType*, 6> syscall_table{
+extern "C" std::array<SyscallFuncType*, 7> syscall_table{
     syscall::LogString,
     syscall::PutString,
     syscall::Exit,
     syscall::OpenWindow,
     syscall::WinWriteString,
     syscall::WinFillRectangle,
+    syscall::GetCurrentTick,
 };
 
 void InitializeSyscall() {
