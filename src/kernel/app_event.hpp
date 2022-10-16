@@ -8,6 +8,7 @@ extern "C" {
         enum Type {
             kQuit,
             kMouseMove,
+            kMouseButton,
         } type;
 
         union {
@@ -16,6 +17,12 @@ extern "C" {
                 int dx, dy;
                 uint8_t buttons;
             } mouse_move;
+
+            struct {
+                int x, y;
+                int press;
+                int button;
+            } mouse_button;
         } arg;
     };
 
