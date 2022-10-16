@@ -256,3 +256,8 @@ void TaskManager::changeLevelRunning(Task *task, int level) {
     }
     current_level_ = level;
 }
+
+__attribute__((no_caller_saved_registers))
+extern "C" uint64_t GetCurrentTaskOSStackPointer() {
+    return task_manager->CurrentTask().OSStackPointer();
+}
