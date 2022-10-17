@@ -572,6 +572,9 @@ void TaskTerminal(uint64_t task_id, int64_t data) {
             break;
         case Message::kKeyPush:
             {
+                if (!msg->arg.keyboard.press) {
+                    break;
+                }
                 const auto area = terminal->InputKey(
                     msg->arg.keyboard.modifier,
                     msg->arg.keyboard.keycode,
@@ -580,8 +583,8 @@ void TaskTerminal(uint64_t task_id, int64_t data) {
                 __asm__("cli");
                 task_manager->SendMessage(1, msg);
                 __asm__("sti");
+                break;
             }
-            break;
         default:
             break;
         }

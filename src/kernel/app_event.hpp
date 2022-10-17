@@ -10,6 +10,7 @@ extern "C" {
             kMouseMove,
             kMouseButton,
             kTimerTimeout,
+            kKeyPush,
         } type;
 
         union {
@@ -29,6 +30,13 @@ extern "C" {
                 unsigned long timeout;
                 int value;
             } timer;
+
+            struct {
+                uint8_t modifier;
+                uint8_t keycode;
+                char ascii;
+                int press;
+            } keypush;
         } arg;
     };
 
