@@ -222,6 +222,10 @@ void KernelMainNewStack(
         if (msg->arg.keyboard.press) {
           InputTextWindow(msg->arg.keyboard.ascii);
         }
+      } else if (msg->arg.keyboard.press && msg->arg.keyboard.keycode == 59) {
+        task_manager->NewTask()
+          .InitContext(TaskTerminal, 0)
+          .Wakeup();
       } else {
         __asm__("cli");
         auto task_it = layer_task_map->find(act);
