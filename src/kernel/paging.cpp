@@ -26,3 +26,7 @@ void SetupIdentiryPageTable() {
 void InitializePaging() {
     SetupIdentiryPageTable();
 }
+
+void ResetCR3() {
+    SetCR3(reinterpret_cast<uint64_t>(&pml4_table[0]));
+}
