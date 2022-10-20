@@ -310,8 +310,13 @@ SyscallEntry:
 .exit:
     mov rsp, rax ; OS 用のスタックポインタ復帰
     mov eax, edx
+    jmp ExitApp
 
-    ; OS 用レジスタの値を復帰
+global ExitApp
+ExitApp:
+    mov rsp, rdi
+    mov eax, esi
+
     pop r15
     pop r14
     pop r13
@@ -319,4 +324,4 @@ SyscallEntry:
     pop rbp
     pop rbx
 
-    ret ; CallApp の次の行に飛ぶ
+    ret

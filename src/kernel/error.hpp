@@ -31,6 +31,7 @@ class Error {
     kNoSuchTask,
     kInvalidFormat,
     kFrameTooSmall,
+    kInvalidFile,
     kLastOfCode,  // この列挙子は常に最後に配置する
   };
 
@@ -60,6 +61,7 @@ class Error {
     "kNoPCIMSI",
     "kNoSuchTask",
     "kInvalidFormat",
+    "kInvalidFile",
     "kFrameTooSmall",
   };
   static_assert(Error::Code::kLastOfCode == code_names_.size());
