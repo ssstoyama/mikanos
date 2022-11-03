@@ -101,6 +101,8 @@ T* GetSectorByCluster(unsigned long cluster) {
  */
 void ReadName(const DirectoryEntry& entry, char* base, char* ext);
 
+void FormatName(const DirectoryEntry& entry, char* dest);
+
 static const unsigned long kEndOfClusterchain = 0x0ffffffflu;
 
 /** @brief 指定されたクラスタの次のクラスタ番号を返す。
@@ -116,7 +118,8 @@ unsigned long NextCluster(unsigned long cluster);
  * @param directory_cluster  ディレクトリの開始クラスタ（省略するとルートディレクトリから検索する）
  * @return ファイルを表すエントリ。見つからなければ nullptr。
  */
-DirectoryEntry* FindFile(const char* name, unsigned long directory_cluster = 0);
+std::pair<DirectoryEntry*, bool>
+FindFile(const char* path, unsigned long directory_cluster = 0);
 
 bool NameIsEqual(const DirectoryEntry& entry, const char* name);
 
