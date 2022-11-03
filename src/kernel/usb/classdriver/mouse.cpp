@@ -27,14 +27,14 @@ namespace usb {
     FreeMem(ptr);
   }
 
-  void HIDMouseDriver::SubscribeMouseMove(
-      std::function<ObserverType> observer) {
+  void HIDMouseDriver::SubscribeMouseMove(std::function<ObserverType> observer) {
     observers_[num_observers_++] = observer;
   }
 
   std::function<HIDMouseDriver::ObserverType> HIDMouseDriver::default_observer;
 
-  void HIDMouseDriver::NotifyMouseMove(uint8_t buttons,int8_t displacement_x, int8_t displacement_y) {
+  void HIDMouseDriver::NotifyMouseMove(
+      uint8_t buttons, int8_t displacement_x, int8_t displacement_y) {
     for (int i = 0; i < num_observers_; ++i) {
       observers_[i](buttons, displacement_x, displacement_y);
     }

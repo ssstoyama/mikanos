@@ -34,11 +34,11 @@ extern "C" void main(int argc, char** argv) {
       Push(a);
     }
   }
-
   long result = 0;
   if (stack_ptr >= 0) {
     result = Pop();
   }
+
   printf("%ld\n", result);
   exit(static_cast<int>(result));
 }

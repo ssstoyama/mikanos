@@ -1,4 +1,4 @@
-TARGET=onlyhlt
+TARGET = onlyhlt
 
 .PHONY: all
 all: $(TARGET)

@@ -4,10 +4,11 @@
  * コンソール描画のプログラムを集めたファイル．
  */
 
-#include <cstring>
-
 #include "console.hpp"
+
+#include <cstring>
 #include "font.hpp"
+#include "layer.hpp"
 
 Console::Console(const PixelColor& fg_color, const PixelColor& bg_color)
     : writer_{nullptr}, window_{}, fg_color_{fg_color}, bg_color_{bg_color},
@@ -17,9 +18,9 @@ Console::Console(const PixelColor& fg_color, const PixelColor& bg_color)
 void Console::PutString(const char* s) {
   while (*s) {
     if (*s == '\n') {
-      newline();
+      Newline();
     } else if (cursor_column_ < kColumns - 1) {
-      WriteAscii(*writer_, 8 * cursor_column_, 16 * cursor_row_, *s, fg_color_);
+      WriteAscii(*writer_, Vector2D<int>{8 * cursor_column_, 16 * cursor_row_}, *s, fg_color_);
       buffer_[cursor_row_][cursor_column_] = *s;
       ++cursor_column_;
     }
@@ -30,23 +31,22 @@ void Console::PutString(const char* s) {
   }
 }
 
-void Console::SetWriter(PixelWriter *writer) {
+void Console::SetWriter(PixelWriter* writer) {
   if (writer == writer_) {
     return;
   }
-
   writer_ = writer;
-  refresh();
+  window_.reset();
+  Refresh();
 }
 
-void Console::SetWindow(const std::shared_ptr<Window> &window) {
+void Console::SetWindow(const std::shared_ptr<Window>& window) {
   if (window == window_) {
     return;
   }
-
   window_ = window;
   writer_ = window->Writer();
-  refresh();
+  Refresh();
 }
 
 void Console::SetLayerID(unsigned int layer_id) {
@@ -57,7 +57,7 @@ unsigned int Console::LayerID() const {
   return layer_id_;
 }
 
-void Console::newline() {
+void Console::Newline() {
   cursor_column_ = 0;
   if (cursor_row_ < kRows - 1) {
     ++cursor_row_;
@@ -65,36 +65,34 @@ void Console::newline() {
   }
 
   if (window_) {
-    // 2 行目から最終行までを 1 つ上にずらす
-    Rectangle<int> move_src{{0, 16}, {8*kColumns, 16*(kRows-1)}};
+    Rectangle<int> move_src{{0, 16}, {8 * kColumns, 16 * (kRows - 1)}};
     window_->Move({0, 0}, move_src);
-    // 最終業を背景色で塗りつぶす
-    FillRectangle(*writer_, {0, 16*(kRows-1)}, {8 * kColumns, 16}, bg_color_);
+    FillRectangle(*writer_, {0, 16 * (kRows - 1)}, {8 * kColumns, 16}, bg_color_);
   } else {
-    FillRectangle(*writer_, {0, 0}, {8*kColumns, 16*kRows}, bg_color_);
+    FillRectangle(*writer_, {0, 0}, {8 * kColumns, 16 * kRows}, bg_color_);
     for (int row = 0; row < kRows - 1; ++row) {
-      memcpy(buffer_[row], buffer_[row+1], kColumns+1);
-      WriteString(*writer_, Vector2D<int>{0, 16*row}, buffer_[row], fg_color_);
+      memcpy(buffer_[row], buffer_[row + 1], kColumns + 1);
+      WriteString(*writer_, Vector2D<int>{0, 16 * row}, buffer_[row], fg_color_);
     }
-    memset(buffer_[kRows-1], 0, kColumns+1);
+    memset(buffer_[kRows - 1], 0, kColumns + 1);
   }
 }
 
-void Console::refresh() {
-  FillRectangle(*writer_, {0, 0}, {8*kColumns, 16*kRows}, bg_color_);
+void Console::Refresh() {
+  FillRectangle(*writer_, {0, 0}, {8 * kColumns, 16 * kRows}, bg_color_);
   for (int row = 0; row < kRows; ++row) {
-    WriteString(*writer_, Vector2D<int>{0, 16*row}, buffer_[row], fg_color_);
+    WriteString(*writer_, Vector2D<int>{0, 16 * row}, buffer_[row], fg_color_);
   }
 }
+
+Console* console;
 
 namespace {
   char console_buf[sizeof(Console)];
 }
 
-Console * console;
-
 void InitializeConsole() {
-  ::console = new(console_buf) Console{
+  console = new(console_buf) Console{
     kDesktopFGColor, kDesktopBGColor
   };
   console->SetWriter(screen_writer);

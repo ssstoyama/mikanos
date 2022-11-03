@@ -18,7 +18,7 @@ namespace usb {
     }
     const auto changed = prev ^ current;
     const auto pressed = changed & current;
-    for (int key = 1; key < 255; ++key) {
+    for (int key = 1; key < 256; ++key) {
       if (changed.test(key)) {
         NotifyKeyPush(Buffer()[0], key, pressed.test(key));
       }
@@ -47,4 +47,3 @@ namespace usb {
     }
   }
 }
-

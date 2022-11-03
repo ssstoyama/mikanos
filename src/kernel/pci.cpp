@@ -5,6 +5,7 @@
  */
 
 #include "pci.hpp"
+
 #include "asmfunc.h"
 #include "logger.hpp"
 
@@ -96,55 +97,67 @@ namespace {
     return MAKE_ERROR(Error::kSuccess);
   }
 
-  MSICapability readMSICapability(const Device& dev, uint8_t msi_cap_addr) {
+  /** @brief 指定された MSI ケーパビリティ構造を読み取る
+   *
+   * @param dev  MSI ケーパビリティを読み込む PCI デバイス
+   * @param cap_addr  MSI ケーパビリティレジスタのコンフィグレーション空間アドレス
+   */
+  MSICapability ReadMSICapability(const Device& dev, uint8_t cap_addr) {
     MSICapability msi_cap{};
-    msi_cap.header.data = ReadConfReg(dev, msi_cap_addr);
-    msi_cap.msg_addr = ReadConfReg(dev, msi_cap_addr+4);
 
-    uint8_t msg_data_addr = msi_cap_addr + 8;
+    msi_cap.header.data = ReadConfReg(dev, cap_addr);
+    msi_cap.msg_addr = ReadConfReg(dev, cap_addr + 4);
+
+    uint8_t msg_data_addr = cap_addr + 8;
     if (msi_cap.header.bits.addr_64_capable) {
-      msi_cap.msg_upper_addr = ReadConfReg(dev, msi_cap_addr+8);
-      msg_data_addr = msi_cap_addr + 12;
+      msi_cap.msg_upper_addr = ReadConfReg(dev, cap_addr + 8);
+      msg_data_addr = cap_addr + 12;
     }
 
     msi_cap.msg_data = ReadConfReg(dev, msg_data_addr);
 
     if (msi_cap.header.bits.per_vector_mask_capable) {
-      msi_cap.mask_bits = ReadConfReg(dev, msg_data_addr+4);
-      msi_cap.pending_bits = ReadConfReg(dev, msg_data_addr+8);
+      msi_cap.mask_bits = ReadConfReg(dev, msg_data_addr + 4);
+      msi_cap.pending_bits = ReadConfReg(dev, msg_data_addr + 8);
     }
 
     return msi_cap;
   }
 
-  void writeMSICapability(const Device& dev, uint8_t msi_cap_addr, const MSICapability& msi_cap) {
-    WriteConfReg(dev, msi_cap_addr, msi_cap.header.data);
-    WriteConfReg(dev, msi_cap_addr+4, msi_cap.msg_addr);
+  /** @brief 指定された MSI ケーパビリティ構造に書き込む
+   *
+   * @param dev  MSI ケーパビリティを読み込む PCI デバイス
+   * @param cap_addr  MSI ケーパビリティレジスタのコンフィグレーション空間アドレス
+   * @param msi_cap  書き込む値
+   */
+  void WriteMSICapability(const Device& dev, uint8_t cap_addr,
+                          const MSICapability& msi_cap) {
+    WriteConfReg(dev, cap_addr, msi_cap.header.data);
+    WriteConfReg(dev, cap_addr + 4, msi_cap.msg_addr);
 
-    uint8_t msg_data_addr = msi_cap_addr + 8;
+    uint8_t msg_data_addr = cap_addr + 8;
     if (msi_cap.header.bits.addr_64_capable) {
-      WriteConfReg(dev, msi_cap_addr+8, msi_cap.msg_upper_addr);
-      msg_data_addr = msi_cap_addr + 12;
+      WriteConfReg(dev, cap_addr + 8, msi_cap.msg_upper_addr);
+      msg_data_addr = cap_addr + 12;
     }
 
     WriteConfReg(dev, msg_data_addr, msi_cap.msg_data);
 
     if (msi_cap.header.bits.per_vector_mask_capable) {
-      WriteConfReg(dev, msg_data_addr+4, msi_cap.mask_bits);
-      WriteConfReg(dev, msg_data_addr+8, msi_cap.pending_bits);
+      WriteConfReg(dev, msg_data_addr + 4, msi_cap.mask_bits);
+      WriteConfReg(dev, msg_data_addr + 8, msi_cap.pending_bits);
     }
   }
 
-  Error configureMSIRegister(
-    const Device& dev,
-    uint8_t msi_cap_addr,
-    uint32_t msg_addr,
-    uint32_t msg_data,
-    unsigned int num_vector_exponent
-  ) {
-    auto msi_cap = readMSICapability(dev, msi_cap_addr);
+  /** @brief 指定された MSI レジスタを設定する */
+  Error ConfigureMSIRegister(const Device& dev, uint8_t cap_addr,
+                            uint32_t msg_addr, uint32_t msg_data,
+                            unsigned int num_vector_exponent) {
+    auto msi_cap = ReadMSICapability(dev, cap_addr);
+
     if (msi_cap.header.bits.multi_msg_capable <= num_vector_exponent) {
-      msi_cap.header.bits.multi_msg_enable = msi_cap.header.bits.multi_msg_capable;
+      msi_cap.header.bits.multi_msg_enable =
+        msi_cap.header.bits.multi_msg_capable;
     } else {
       msi_cap.header.bits.multi_msg_enable = num_vector_exponent;
     }
@@ -153,17 +166,14 @@ namespace {
     msi_cap.msg_addr = msg_addr;
     msi_cap.msg_data = msg_data;
 
-    writeMSICapability(dev, msi_cap_addr, msi_cap);
+    WriteMSICapability(dev, cap_addr, msi_cap);
     return MAKE_ERROR(Error::kSuccess);
   }
 
-  Error configureMSIXRegister(
-    const Device& dev,
-    uint8_t msi_cap_addr,
-    uint32_t msg_addr,
-    uint32_t msg_data,
-    unsigned int num_vector_exponent
-  ) {
+  /** @brief 指定された MSI レジスタを設定する */
+  Error ConfigureMSIXRegister(const Device& dev, uint8_t cap_addr,
+                             uint32_t msg_addr, uint32_t msg_data,
+                             unsigned int num_vector_exponent) {
     return MAKE_ERROR(Error::kNotImplemented);
   }
 }
@@ -185,17 +195,17 @@ namespace pci {
     WriteAddress(MakeAddress(bus, device, function, 0x00));
     return ReadData() & 0xffffu;
   }
-  
+
   uint16_t ReadDeviceId(uint8_t bus, uint8_t device, uint8_t function) {
     WriteAddress(MakeAddress(bus, device, function, 0x00));
     return ReadData() >> 16;
   }
-  
+
   uint8_t ReadHeaderType(uint8_t bus, uint8_t device, uint8_t function) {
     WriteAddress(MakeAddress(bus, device, function, 0x0c));
     return (ReadData() >> 16) & 0xffu;
   }
-  
+
   ClassCode ReadClassCode(uint8_t bus, uint8_t device, uint8_t function) {
     WriteAddress(MakeAddress(bus, device, function, 0x08));
     auto reg = ReadData();
@@ -205,7 +215,7 @@ namespace pci {
     cc.interface  = (reg >> 8)  & 0xffu;
     return cc;
   }
-  
+
   uint32_t ReadBusNumbers(uint8_t bus, uint8_t device, uint8_t function) {
     WriteAddress(MakeAddress(bus, device, function, 0x18));
     return ReadData();
@@ -275,15 +285,10 @@ namespace pci {
     return header;
   }
 
-  Error ConfigureMSI(
-    const Device& dev,
-    uint32_t msg_addr,
-    uint32_t msg_data,
-    unsigned int num_vector_exponent
-  ) {
-    uint8_t cap_addr = ReadConfReg(dev, 0x34u) & 0xffu;
-    uint8_t msi_cap_addr = 0;
-    uint8_t msix_cap_addr = 0;
+  Error ConfigureMSI(const Device& dev, uint32_t msg_addr, uint32_t msg_data,
+                     unsigned int num_vector_exponent) {
+    uint8_t cap_addr = ReadConfReg(dev, 0x34) & 0xffu;
+    uint8_t msi_cap_addr = 0, msix_cap_addr = 0;
     while (cap_addr != 0) {
       auto header = ReadCapabilityHeader(dev, cap_addr);
       if (header.bits.cap_id == kCapabilityMSI) {
@@ -291,48 +296,42 @@ namespace pci {
       } else if (header.bits.cap_id == kCapabilityMSIX) {
         msix_cap_addr = cap_addr;
       }
-
       cap_addr = header.bits.next_ptr;
     }
 
     if (msi_cap_addr) {
-      return configureMSIRegister(dev, msi_cap_addr, msg_addr, msg_data, num_vector_exponent);
+      return ConfigureMSIRegister(dev, msi_cap_addr, msg_addr, msg_data, num_vector_exponent);
     } else if (msix_cap_addr) {
-      return configureMSIXRegister(dev, msi_cap_addr, msg_addr, msg_data, num_vector_exponent);
+      return ConfigureMSIXRegister(dev, msix_cap_addr, msg_addr, msg_data, num_vector_exponent);
     }
-
     return MAKE_ERROR(Error::kNoPCIMSI);
   }
 
   Error ConfigureMSIFixedDestination(
-    const Device& dev,
-    uint8_t apic_id,
-    MSITriggerMode trigger_mode,
-    MSIDeliveryMode delivery_mode,
-    uint8_t vector,
-    unsigned int num_vector_exponent
-  ) {
+      const Device& dev, uint8_t apic_id,
+      MSITriggerMode trigger_mode, MSIDeliveryMode delivery_mode,
+      uint8_t vector, unsigned int num_vector_exponent) {
     uint32_t msg_addr = 0xfee00000u | (apic_id << 12);
     uint32_t msg_data = (static_cast<uint32_t>(delivery_mode) << 8) | vector;
-
     if (trigger_mode == MSITriggerMode::kLevel) {
-      msg_data |= (0b1u << 15);
+      msg_data |= 0xc000;
     }
     return ConfigureMSI(dev, msg_addr, msg_data, num_vector_exponent);
   }
 }
 
 void InitializePCI() {
-  auto err = pci::ScanAllBus();
-  Log(kDebug, "ScanAllBus: %s\n", err.Name());
+  if (auto err = pci::ScanAllBus()) {
+    Log(kError, "ScanAllBus: %s\n", err.Name());
+    exit(1);
+  }
 
-  Log(kDebug, "PCI Devices: \n");
   for (int i = 0; i < pci::num_device; ++i) {
     const auto& dev = pci::devices[i];
-    auto vendor_id = pci::ReadVendorId(dev.bus, dev.device, dev.function);
+    auto vendor_id = pci::ReadVendorId(dev);
     auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
-    Log(kDebug, "%d.%d.%d: vendor: %04x, class %08x, head %02x\n",
-      dev.bus, dev.device, dev.function,
-      vendor_id, class_code, dev.header_type);
+    Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n",
+        dev.bus, dev.device, dev.function,
+        vendor_id, class_code, dev.header_type);
   }
 }

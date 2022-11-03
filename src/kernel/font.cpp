@@ -18,7 +18,7 @@ const uint8_t* GetFont(char c) {
   return &_binary_hankaku_bin_start + index;
 }
 
-void WriteAscii(PixelWriter& writer, int x, int y, char c, const PixelColor& color) {
+void WriteAscii(PixelWriter& writer, Vector2D<int> pos, char c, const PixelColor& color) {
   const uint8_t* font = GetFont(c);
   if (font == nullptr) {
     return;
@@ -26,22 +26,14 @@ void WriteAscii(PixelWriter& writer, int x, int y, char c, const PixelColor& col
   for (int dy = 0; dy < 16; ++dy) {
     for (int dx = 0; dx < 8; ++dx) {
       if ((font[dy] << dx) & 0x80u) {
-        writer.Write(x + dx, y + dy, color);
+        writer.Write(pos + Vector2D<int>{dx, dy}, color);
       }
     }
   }
 }
 
-void WriteAscii(PixelWriter& writer, Vector2D<int> pos, char c, const PixelColor& color) {
-  WriteAscii(writer, pos.x, pos.y, c, color);
-}
-
-void WriteString(PixelWriter& writer, int x, int y, const char* s, const PixelColor& color) {
-  for (int i = 0; s[i] != '\0'; ++i) {
-    WriteAscii(writer, x + 8 * i, y, s[i], color);
-  }
-}
-
 void WriteString(PixelWriter& writer, Vector2D<int> pos, const char* s, const PixelColor& color) {
-  WriteString(writer, pos.x, pos.y, s, color);
+  for (int i = 0; s[i] != '\0'; ++i) {
+    WriteAscii(writer, pos + Vector2D<int>{8 * i, 0}, s[i], color);
+  }
 }

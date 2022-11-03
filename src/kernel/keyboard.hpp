@@ -1,16 +1,21 @@
+/**
+ * @file keyboard.hpp
+ *
+ * キーボード制御プログラム．
+ */
+
 #pragma once
 
 #include <deque>
-
 #include "message.hpp"
 
-const int kKbdLControlBitMask = 1u << 0;
-const int kKbdLShiftBitMask = 1u << 1;
-const int kKbdLAltBitMask = 1u << 2;
-const int kKbdLGUIBitMask = 1u << 3;
-const int kKbdRControlBitMask = 1u << 4;
-const int kKbdRShiftBitMask = 1u << 5;
-const int kKbdRAltBitMask = 1u << 6;
-const int kKbdRGUIBitMask = 1u << 7;
+static const int kLControlBitMask = 0b00000001u;
+static const int kLShiftBitMask   = 0b00000010u;
+static const int kLAltBitMask     = 0b00000100u;
+static const int kLGUIBitMask     = 0b00001000u;
+static const int kRControlBitMask = 0b00010000u;
+static const int kRShiftBitMask   = 0b00100000u;
+static const int kRAltBitMask     = 0b01000000u;
+static const int kRGUIBitMask     = 0b10000000u;
 
 void InitializeKeyboard();

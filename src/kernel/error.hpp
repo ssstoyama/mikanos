@@ -57,12 +57,12 @@ class Error {
     "kInvalidPhase",
     "kUnknownXHCISpeedID",
     "kNoWaiter",
-    "kUnknownPixelFormat",
     "kNoPCIMSI",
+    "kUnknownPixelFormat",
     "kNoSuchTask",
     "kInvalidFormat",
-    "kInvalidFile",
     "kFrameTooSmall",
+    "kInvalidFile",
   };
   static_assert(Error::Code::kLastOfCode == code_names_.size());
 

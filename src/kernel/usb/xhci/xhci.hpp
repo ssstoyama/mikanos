@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <memory>
 #include "error.hpp"
 #include "usb/xhci/registers.hpp"
 #include "usb/xhci/context.hpp"
@@ -65,8 +66,7 @@ namespace usb::xhci {
    */
   Error ProcessEvent(Controller& xhc);
 
-  extern Controller *controller;
-
+  extern Controller* controller;
   void Initialize();
   void ProcessEvents();
 }

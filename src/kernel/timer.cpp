@@ -1,113 +1,95 @@
 #include "timer.hpp"
-#include "interrupt.hpp"
+
 #include "acpi.hpp"
+#include "interrupt.hpp"
 #include "task.hpp"
 
+namespace {
+  const uint32_t kCountMax = 0xffffffffu;
+  volatile uint32_t& lvt_timer = *reinterpret_cast<uint32_t*>(0xfee00320);
+  volatile uint32_t& initial_count = *reinterpret_cast<uint32_t*>(0xfee00380);
+  volatile uint32_t& current_count = *reinterpret_cast<uint32_t*>(0xfee00390);
+  volatile uint32_t& divide_config = *reinterpret_cast<uint32_t*>(0xfee003e0);
+}
+
+void InitializeLAPICTimer() {
+  timer_manager = new TimerManager;
+
+  divide_config = 0b1011; // divide 1:1
+  lvt_timer = 0b001 << 16; // masked, one-shot
+
+  StartLAPICTimer();
+  acpi::WaitMilliseconds(100);
+  const auto elapsed = LAPICTimerElapsed();
+  StopLAPICTimer();
+
+  lapic_timer_freq = static_cast<unsigned long>(elapsed) * 10;
+
+  divide_config = 0b1011; // divide 1:1
+  lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer; // not-masked, periodic
+  initial_count = lapic_timer_freq / kTimerFreq;
+}
+
+void StartLAPICTimer() {
+  initial_count = kCountMax;
+}
+
+uint32_t LAPICTimerElapsed() {
+  return kCountMax - current_count;
+}
+
+void StopLAPICTimer() {
+  initial_count = 0;
+}
+
+Timer::Timer(unsigned long timeout, int value, uint64_t task_id)
+    : timeout_{timeout}, value_{value}, task_id_{task_id} {
+}
+
 TimerManager::TimerManager() {
-    timers_.push(Timer{std::numeric_limits<unsigned long>::max(), 0, 0});
+  timers_.push(Timer{std::numeric_limits<unsigned long>::max(), 0, 0});
 }
 
 void TimerManager::AddTimer(const Timer& timer) {
-    timers_.push(timer);
+  timers_.push(timer);
 }
 
 bool TimerManager::Tick() {
-    ++tick_;
+  ++tick_;
 
-    bool task_timer_timeout = false;
-    while (true) {
-        const auto &t = timers_.top();
-        if (t.Timeout() > tick_) {
-            break;
-        }
-
-        if (t.Value() == kTaskTimerValue) {
-            task_timer_timeout = true;
-            timers_.pop();
-            timers_.push(Timer{tick_+kTaskTimerPeriod, kTaskTimerValue, 1});
-            continue;
-        }
-
-        Message msg{Message::kTimerTimeout};
-        msg.arg.timer.timeout = t.Timeout();
-        msg.arg.timer.value = t.Value();
-        // メインタスクのID=1
-        task_manager->SendMessage(t.TaskID(), msg);
-
-        timers_.pop();
+  bool task_timer_timeout = false;
+  while (true) {
+    const auto& t = timers_.top();
+    if (t.Timeout() > tick_) {
+      break;
     }
 
-    return task_timer_timeout;
+    if (t.Value() == kTaskTimerValue) {
+      task_timer_timeout = true;
+      timers_.pop();
+      timers_.push(Timer{tick_ + kTaskTimerPeriod, kTaskTimerValue, 1});
+      continue;
+    }
+
+    Message m{Message::kTimerTimeout};
+    m.arg.timer.timeout = t.Timeout();
+    m.arg.timer.value = t.Value();
+    task_manager->SendMessage(t.TaskID(), m);
+
+    timers_.pop();
+  }
+
+  return task_timer_timeout;
 }
-
-unsigned long TimerManager::CurrentTick() const {
-    return tick_;
-}
-
-Timer::Timer(unsigned long timeout, int value, uint64_t task_id):
-    timeout_{timeout}, value_{value}, task_id_{task_id} {}
-
-unsigned long Timer::Timeout() const {
-    return timeout_;
-}
-
-int Timer::Value() const { return value_; }
 
 TimerManager* timer_manager;
 unsigned long lapic_timer_freq;
 
-namespace {
-    const uint32_t kCountMax = 0xffffffffu;
-    // 割り込みの発生方法の設定など
-    volatile uint32_t &lvt_timer     = *reinterpret_cast<uint32_t *>(0xfee00320);
-    // カウンタの初期値
-    volatile uint32_t &initial_count = *reinterpret_cast<uint32_t *>(0xfee00380);
-    // カウンタの現在地
-    volatile uint32_t &current_count = *reinterpret_cast<uint32_t *>(0xfee00390);
-    // カウンタの減少スピードの設定
-    volatile uint32_t &divide_config = *reinterpret_cast<uint32_t *>(0xfee003e0);
-}
-
-void InitializeLAPICTimer() {
-    timer_manager = new TimerManager();
-
-    divide_config = 0b1011u; // devide 1:1
-    // 16    bit: 割り込みマスク. 1=割り込み不許可 セット
-    lvt_timer = 0b001u << 16; // masked;
-
-    StartLAPICTimer();
-    acpi::WaitMilliseconds(100); // 0.1s 待機
-    const auto elapsed = LAPICTimerElapsed(); // 0.1s 分のカウント計測
-    StopLAPICTimer();
-
-    lapic_timer_freq = static_cast<unsigned long>(elapsed) * 10; // 0.1s * 10 = 1s 分のカウントに変換
-
-    divide_config = 0b1011u;
-    // 0-7   bit: 割り込みベクタ. 0x41 セット
-    // 16    bit: 割り込みマスク. 0=割り込み許可 セット
-    // 17-18 bit: タイマー動作モード. 1=周期 セット
-    lvt_timer = (0b010u << 16) | InterruptVector::kLAPICTimer;
-    // 1 / kTimerFreq 秒ごとに割り込みが発生する
-    initial_count = lapic_timer_freq / kTimerFreq;
-}
-
-void StartLAPICTimer() {
-    initial_count = kCountMax;
-}
-
-uint32_t LAPICTimerElapsed() {
-    return kCountMax - current_count;
-}
-
-void StopLAPICTimer() {
-    initial_count = 0;
-}
-
 extern "C" void LAPICTimerOnInterrupt(const TaskContext& ctx_stack) {
-    const bool task_timer_timeout = timer_manager->Tick();
-    NotifyEndOfInterrupt();
+  const bool task_timer_timeout = timer_manager->Tick();
+  NotifyEndOfInterrupt();
 
-    if (task_timer_timeout) {
-        task_manager->SwitchTask(ctx_stack);
-    }
+  if (task_timer_timeout) {
+    task_manager->SwitchTask(ctx_stack);
+  }
 }
