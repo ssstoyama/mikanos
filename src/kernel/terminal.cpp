@@ -94,7 +94,7 @@ WithError<uint64_t> CopyLoadSegments(Elf64_Ehdr* ehdr) {
     last_addr = std::max(last_addr, phdr[i].p_vaddr + phdr[i].p_memsz);
     const auto num_4kpages = (phdr[i].p_memsz + 4095) / 4096;
 
-    if (auto err = SetupPageMaps(dest_addr, num_4kpages)) {
+    if (auto err = SetupPageMaps(dest_addr, num_4kpages, false)) {
       return {last_addr, err};
     }
 
@@ -117,43 +117,6 @@ WithError<uint64_t> LoadELF(Elf64_Ehdr* ehdr) {
   }
 
   return CopyLoadSegments(ehdr);
-}
-
-Error CleanPageMap(PageMapEntry* page_map, int page_map_level) {
-  for (int i = 0; i < 512; ++i) {
-    auto entry = page_map[i];
-    if (!entry.bits.present) {
-      continue;
-    }
-
-    if (page_map_level > 1) {
-      if (auto err = CleanPageMap(entry.Pointer(), page_map_level - 1)) {
-        return err;
-      }
-    }
-
-    const auto entry_addr = reinterpret_cast<uintptr_t>(entry.Pointer());
-    const FrameID map_frame{entry_addr / kBytesPerFrame};
-    if (auto err = memory_manager->Free(map_frame, 1)) {
-      return err;
-    }
-    page_map[i].data = 0;
-  }
-
-  return MAKE_ERROR(Error::kSuccess);
-}
-
-Error CleanPageMaps(LinearAddress4Level addr) {
-  auto pml4_table = reinterpret_cast<PageMapEntry*>(GetCR3());
-  auto pdp_table = pml4_table[addr.parts.pml4].Pointer();
-  pml4_table[addr.parts.pml4].data = 0;
-  if (auto err = CleanPageMap(pdp_table, 3)) {
-    return err;
-  }
-
-  const auto pdp_addr = reinterpret_cast<uintptr_t>(pdp_table);
-  const FrameID pdp_frame{pdp_addr / kBytesPerFrame};
-  return memory_manager->Free(pdp_frame, 1);
 }
 
 WithError<PageMapEntry*> SetupPML4(Task& current_task) {
@@ -206,7 +169,49 @@ void ListAllEntries(Terminal* term, uint32_t dir_cluster) {
   }
 }
 
+WithError<AppLoadInfo> LoadApp(fat::DirectoryEntry& file_entry, Task& task) {
+  PageMapEntry* temp_pml4;
+  if (auto [pml4, err] = SetupPML4(task); err) {
+    return {{}, err};
+  } else {
+    temp_pml4 = pml4;
+  }
+
+  if (auto it = app_loads->find(&file_entry); it != app_loads->end()) {
+    AppLoadInfo app_load = it->second;
+    auto err = CopyPageMaps(temp_pml4, app_load.pml4, 4, 256);
+    app_load.pml4 = temp_pml4;
+    return {app_load, err};
+  }
+
+  std::vector<uint8_t> file_buf(file_entry.file_size);
+  fat::LoadFile(&file_buf[0], file_buf.size(), file_entry);
+
+  auto elf_header = reinterpret_cast<Elf64_Ehdr*>(&file_buf[0]);
+  if (memcmp(elf_header->e_ident, "\x7f" "ELF", 4) != 0) {
+    return {{}, MAKE_ERROR(Error::kInvalidFile)};
+  }
+
+  auto [last_addr, err_load] = LoadELF(elf_header);
+  if (err_load) {
+    return {{}, err_load};
+  }
+
+  AppLoadInfo app_load{last_addr, elf_header->e_entry, temp_pml4};
+  app_loads->insert(std::make_pair(&file_entry, app_load));
+
+  if (auto [pml4, err] = SetupPML4(task); err) {
+    return {app_load, err};
+  } else {
+    app_load.pml4 = pml4;
+  }
+  auto err = CopyPageMaps(app_load.pml4, temp_pml4, 4, 256);
+  return {app_load, err};
+}
+
 } // namespace
+
+std::map<fat::DirectoryEntry*, AppLoadInfo>* app_loads;
 
 Terminal::Terminal(uint64_t task_id, bool show_window)
     : task_id_{task_id}, show_window_{show_window} {
@@ -432,27 +437,13 @@ void Terminal::ExecuteLine() {
 }
 
 Error Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* command, char* first_arg) {
-  std::vector<uint8_t> file_buf(file_entry.file_size);
-  fat::LoadFile(&file_buf[0], file_buf.size(), file_entry);
-
-
-  auto elf_header = reinterpret_cast<Elf64_Ehdr*>(&file_buf[0]);
-  if (memcmp(elf_header->e_ident, "\x7f" "ELF", 4) != 0) {
-    return MAKE_ERROR(Error::kInvalidFile);
-  }
-
-
   __asm__("cli");
   auto& task = task_manager->CurrentTask();
   __asm__("sti");
 
-  if (auto pml4 = SetupPML4(task); pml4.error) {
-    return pml4.error;
-  }
-
-  const auto [elf_last_addr, elf_err] = LoadELF(elf_header);
-  if (elf_err) {
-    return elf_err;
+  auto [app_load, err] = LoadApp(file_entry, task);
+  if (err) {
+    return err;
   }
 
   LinearAddress4Level args_frame_addr{0xffff'ffff'ffff'f000};
@@ -478,14 +469,13 @@ Error Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* command, char
       std::make_unique<TerminalFileDescriptor>(task, *this));
   }
 
-  const uint64_t elf_next_page = (elf_last_addr + 4095) & 0xffff'ffff'ffff'f000;
+  const uint64_t elf_next_page = (app_load.vaddr_end + 4095) & 0xffff'ffff'ffff'f000;
   task.SetDPagingBegin(elf_next_page);
   task.SetDPagingEnd(elf_next_page);
 
   task.SetFileMapEnd(0xffff'ffff'ffff'e000);
 
-  auto entry_addr = elf_header->e_entry;
-  int ret = CallApp(argc.value, argv, 3 << 3 | 3, entry_addr,
+  int ret = CallApp(argc.value, argv, 3 << 3 | 3, app_load.entry,
                     stack_frame_addr.value + 4096 - 8,
                     &task.OSStackPointer());
 
@@ -496,8 +486,7 @@ Error Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* command, char
   sprintf(s, "app exited. ret = %d\n", ret);
   Print(s);
 
-  const auto addr_first = GetFirstLoadAddress(elf_header);
-  if (auto err = CleanPageMaps(LinearAddress4Level{addr_first})) {
+  if (auto err = CleanPageMaps(LinearAddress4Level{0xffff'8000'0000'0000})) {
     return err;
   }
   return FreePML4(task);
