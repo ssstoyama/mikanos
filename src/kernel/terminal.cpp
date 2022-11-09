@@ -460,8 +460,9 @@ Error Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* command, char
     return argc.error;
   }
 
-  LinearAddress4Level stack_frame_addr{0xffff'ffff'ffff'e000};
-  if (auto err = SetupPageMaps(stack_frame_addr, 1)) {
+  const int stack_size = 8 * 4096;
+  LinearAddress4Level stack_frame_addr{0xffff'ffff'ffff'f000 - stack_size};
+  if (auto err = SetupPageMaps(stack_frame_addr, stack_size / 4096)) {
     return err;
   }
 
