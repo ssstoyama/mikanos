@@ -311,7 +311,7 @@ Rectangle<int> Terminal::InputKey(
     draw_area.pos = ToplevelWindow::kTopLeftMargin;
     draw_area.size = window_->InnerSize();
   } else if (ascii == '\b') {
-    if (cursor_.x > 0) {
+    if (cursor_.x > 1) {
       --cursor_.x;
       if (show_window_) {
         FillRectangle(*window_->Writer(), CalcCursorPos(), {8, 16}, {0, 0, 0});
@@ -410,6 +410,7 @@ void Terminal::ExecuteLine() {
       .InitContext(TaskTerminal, reinterpret_cast<int64_t>(term_desc))
       .Wakeup()
       .ID();
+    (*layer_task_map)[layer_id_] = subtask_id;
   }
 
   if (strcmp(command, "echo") == 0) {
@@ -522,6 +523,7 @@ void Terminal::ExecuteLine() {
     pipe_fd->FinishWrite();
     __asm__("cli");
     auto [ec, err] = task_manager->WaitFinish(subtask_id);
+    (*layer_task_map)[layer_id_] = task_.ID();
     __asm__("sti");
     if (err) {
       Log(kWarn, "failed to wait finish: %s\n", err.Name());
