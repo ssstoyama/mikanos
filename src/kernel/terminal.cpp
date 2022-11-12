@@ -570,7 +570,7 @@ WithError<int> Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* comm
     return {0, err};
   }
 
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < files_.size(); ++i) {
     task.Files().push_back(files_[i]);
   }
 
@@ -578,10 +578,10 @@ WithError<int> Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* comm
   task.SetDPagingBegin(elf_next_page);
   task.SetDPagingEnd(elf_next_page);
 
-  task.SetFileMapEnd(0xffff'ffff'ffff'e000);
+  task.SetFileMapEnd(stack_frame_addr.value);
 
   int ret = CallApp(argc.value, argv, 3 << 3 | 3, app_load.entry,
-                    stack_frame_addr.value + 4096 - 8,
+                    stack_frame_addr.value + stack_size - 8,
                     &task.OSStackPointer());
 
   task.Files().clear();
