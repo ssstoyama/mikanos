@@ -6,5 +6,3 @@ FROM ghcr.io/sarisia/mikanos:latest
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     gdb
-
-CMD ["source", "init.sh"]
