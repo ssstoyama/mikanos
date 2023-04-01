@@ -28,3 +28,11 @@ clean:
 cleanall:
 	build cleanall
 	make -C src/kernel clean
+
+.PHONY: mount
+mount:
+	sudo mount -o loop disk.img mnt
+
+.PHONY: umount
+umount:
+	sudo umount mnt
